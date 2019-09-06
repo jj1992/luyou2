@@ -1,0 +1,182 @@
+<template>
+  <mu-container   class="electricCableList">
+
+    <div v-if="noData" style="width:100%;text-align:center;height:50px;line-height:50px;">
+        <span >暂无数据</span>
+    </div>
+    <div v-if="loadingData" style="width:100%;text-align:center;height:50px;line-height:50px;">
+        <div v-loading="true" data-mu-loading-overlay-color="rgba(0, 0, 0, .6)" style="position: relative; width: 100%; height: 100%;"></div>
+    </div>
+
+    <mu-load-more  :loaded-all="loadOver" @refresh="refresh" :refreshing="refreshing" :loading="loading" @load="load" :loading-text=" loadOver === true ? '已经到底了' : '正在努力加载...'">
+      <mu-list toggle-nested >
+ 
+          <div v-for="(item,index) in data" :key="index">
+            <mu-list-item  nested :open="open === index">
+                <mu-list-item-content @click="toggleShow(index)">
+                    <mu-list-item-title class="wall_title">
+                        <img src="../../assets/01_03_03.png" style="width:16px; height:16px;">
+                        {{item.bianhao}}
+                    </mu-list-item-title>
+
+                    <mu-list-item-sub-title >
+                        <span class="item">
+                        {{item.weihudanwei}}|{{item.zhuangtai}}|{{item.yongtu}}
+                        </span>
+                    </mu-list-item-sub-title>
+
+                </mu-list-item-content>
+                <!-- 定位 -->
+                <!-- <mu-list-item-action @click="showManholeInMap(item.id)" style="margin-right:20px;">
+                    <img src="../../assets/01_14.png" style="width:30px; height:30px;" />
+                </mu-list-item-action> -->
+                <mu-list-item-action>
+                    
+                    <mu-list-item-after-text>
+
+                    <router-link style="margin-left:25px;" :to="{path:'/electricCableDetail',query:{id:item.id}}">详情</router-link>
+                           
+                    </mu-list-item-after-text>
+                </mu-list-item-action>     
+            </mu-list-item>
+            <mu-divider></mu-divider>
+          </div>
+
+      </mu-list>
+    </mu-load-more>
+  </mu-container>
+</template>
+
+
+<script>
+export default {
+
+    props:["type","search"],
+    
+    data(){
+
+        return {
+            open:'',
+            refreshing:false,
+            loading:false,
+            data:[],
+            noData:false,
+            loadingData:false,
+            currPage:0,
+            loadOver:false,
+            total:0,
+        };
+    },
+
+    mounted(){ 
+        //挂载后 清除所有数据 重新加载
+        this.loadingData = true;
+        this.loadData();
+    },
+    methods:{
+        toggleShow(i){
+            // this.open =  this.open ===  i  ? '' : i;
+        }
+        ,
+        refresh(){
+            this.total = 0;
+            this.loadOver = false
+            this.refreshing = true;
+            this.currPage = 0;
+            this.loadData();
+
+        },
+        load(){
+            this.loading = true;
+            this.currPage++;
+            this.loadData();
+        },
+ 
+        loadData(){
+
+            let params=new URLSearchParams();
+            
+            params.append("type",this.type);
+            params.append("bianhao",this.search);
+            params.append("page",this.currPage);
+            
+            this.$axios.post("/map/search",params).then((response)=>{
+                this.total = response.data.total
+                let data = response.data.data
+                if(response.data.code !== 200){
+                    this.$toast.error(data.msg);
+                }else{
+                    if(!this.refreshing){
+                        this.data = this.data.concat(data);
+                    }
+                    if(this.data.length === 0){
+                        this.noData = true
+                    }
+                }
+                this.loadingData = false
+                this.refreshing = false
+                this.loading = false
+           }).catch((e)=>{
+                this.loadingData = false;
+                this.$toast.error("数据加载错误");
+           });
+
+        },
+
+        // showManholeInMap(id){
+        //     window.mapifram.gisParams.ziYuanLocation(id,6);
+        // }
+
+    },
+    watch:{
+        '$route'(to,from){
+            this.data = [];
+            this.noData = false
+            this.currPage = 0
+            this.loadingData = true;
+            this.refreshing = false
+            this.loadData();
+        },
+        data:{
+            handler(){
+                if(this.data.length >= this.total){
+                    this.loadOver = true
+                } else {
+                    this.loadOver = false
+                }
+            }
+        }
+    }
+   
+}
+</script>
+
+
+<style scoped>
+
+.buildingList{
+
+    padding: 0px;
+
+}
+.wall_item{
+
+    font-size: 12px;
+
+}
+.wall_title{
+    font-size: 14px;
+    font-weight: bold;
+}
+.mu_item{
+    height:45px;
+}
+.mu-list{
+    padding:0;
+}
+.container{
+    padding-left:0;
+    padding-right:0;
+}
+</style>
+
